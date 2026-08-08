@@ -1,0 +1,10 @@
+{
+  "id": "obsidian_meowbius_ss",
+  "name": "Meowbius_S.S",
+  "version": "1.0.0",
+  "minAppVersion": "1.4.0",
+  "description": "Obsidian 灵感收集与小说脑洞写作管理：灵感收集夹、脑洞空间、模板库、看板统计与修订记录。",
+  "author": "Selenavia",
+  "authorUrl": "",
+  "isDesktopOnly": false
+}

@@ -1,0 +1,20 @@
+{
+  "name": "meowbius-s-s",
+  "version": "1.0.0",
+  "description": "Obsidian 灵感收集与小说脑洞写作管理插件",
+  "main": "main.js",
+  "scripts": {
+    "dev": "node esbuild.config.mjs",
+    "build": "tsc -noEmit -skipLibCheck && node esbuild.config.mjs production",
+    "check": "tsc -noEmit -skipLibCheck"
+  },
+  "keywords": ["obsidian", "novel", "brainstorm"],
+  "author": "Selenavia",
+  "license": "MIT",
+  "devDependencies": {
+    "builtin-modules": "^3.3.0",
+    "esbuild": "^0.21.5",
+    "obsidian": "^1.4.11",
+    "typescript": "^5.4.5"
+  }
+}

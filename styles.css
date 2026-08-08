@@ -1,0 +1,267 @@
+/* Meowbius_S.S —— 看板视图与弹窗样式（适配 Obsidian 浅/深色主题） */
+
+/* 主题变量映射：原型里的 --bg/--text 等统一映射到 Obsidian 主题 token */
+.mb-view,
+.mb-kanban {
+  --mb-bg: var(--background-primary);
+  --mb-bg2: var(--background-secondary);
+  --mb-bg3: var(--background-secondary-alt);
+  --mb-bg4: var(--background-modifier-hover);
+  --mb-text: var(--text-normal);
+  --mb-muted: var(--text-muted);
+  --mb-accent: var(--interactive-accent);
+  --mb-accent2: var(--interactive-accent-hover);
+  --mb-border: var(--background-modifier-border);
+  --mb-green: var(--text-success, #4caf7d);
+  --mb-red: var(--text-error, #e06c75);
+  --mb-blue: var(--text-link, #5b9cf0);
+  --mb-orange: var(--text-warning, #e0a85b);
+  --mb-code: var(--text-normal);
+  /* 热力图分级（紫色调，深浅主题均可见） */
+  --mb-hm0: rgba(139, 108, 239, 0.08);
+  --mb-hm1: rgba(139, 108, 239, 0.28);
+  --mb-hm2: rgba(139, 108, 239, 0.5);
+  --mb-hm3: rgba(139, 108, 239, 0.75);
+  --mb-hm4: #8b6cef;
+}
+
+.mb-view {
+  height: 100%;
+  overflow: auto;
+  color: var(--mb-text);
+  font-size: 14px;
+}
+
+/* ---------- 弹窗（Obsidian Modal 内元素复用） ---------- */
+.mb-modal .setting-item { border-top: none; }
+.mb-input,
+.mb-textarea,
+.mb-select {
+  background: var(--mb-bg);
+  border: 1px solid var(--mb-border);
+  color: var(--mb-text);
+  border-radius: 8px;
+  padding: 9px 11px;
+  font-size: 14px;
+  font-family: inherit;
+  width: 100%;
+  box-sizing: border-box;
+}
+.mb-input:focus,
+.mb-textarea:focus,
+.mb-select:focus { outline: none; border-color: var(--mb-accent); }
+.mb-label { display: block; font-size: 12px; color: var(--mb-muted); margin: 12px 0 5px; }
+.mb-textarea { resize: vertical; min-height: 90px; font-family: "SFMono-Regular", Consolas, monospace; font-size: 12.5px; line-height: 1.5; }
+.mb-btn {
+  background: var(--mb-bg4);
+  border: 1px solid var(--mb-border);
+  color: var(--mb-text);
+  border-radius: 8px;
+  padding: 8px 16px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.mb-btn:hover { background: var(--background-modifier-active-hover, #3d3d3d); }
+.mb-btn.primary { background: var(--mb-accent); border-color: var(--mb-accent); color: #fff; font-weight: 600; }
+.mb-btn.primary:hover { background: var(--mb-accent2); }
+.mb-btn.ghost { background: transparent; }
+.mb-btn.tiny { padding: 3px 10px; font-size: 11px; width: auto; }
+.mb-btn.tiny[disabled] { opacity: 0.35; cursor: not-allowed; }
+.mb-struct { background: var(--mb-bg); border: 1px solid var(--mb-border); border-radius: 8px; padding: 10px 14px; font-family: monospace; font-size: 13px; line-height: 1.7; color: var(--mb-text); white-space: pre; }
+.mb-struct .f { color: var(--mb-accent2); }
+.mb-struct .n { color: var(--mb-accent); }
+.mb-pill { display: inline-block; background: rgba(139, 108, 239, 0.15); border: 1px solid var(--mb-accent); color: var(--mb-accent2); border-radius: 20px; padding: 2px 11px; font-size: 12px; margin: 2px 4px 2px 0; }
+
+/* ---------- 看板内部 ---------- */
+.mb-kanban { padding: 18px 26px 30px; max-width: 1100px; }
+.mb-kanban .ktabs { display: flex; gap: 4px; border-bottom: 1px solid var(--mb-border); margin-bottom: 18px; flex-wrap: wrap; }
+.mb-kanban .ktab { padding: 8px 14px; font-size: 13px; color: var(--mb-muted); cursor: pointer; border-radius: 8px 8px 0 0; }
+.mb-kanban .ktab:hover { background: var(--mb-bg3); color: var(--mb-text); }
+.mb-kanban .ktab.active { color: var(--mb-text); background: var(--mb-bg3); border-bottom: 2px solid var(--mb-accent); }
+.mb-kanban .ktab .mb-icon { width: 16px; height: 16px; display: inline-block; vertical-align: -3px; background-color: currentColor; -webkit-mask: var(--mb-mask) no-repeat center / contain; mask: var(--mb-mask) no-repeat center / contain; }
+.mb-kanban .ksec { margin-bottom: 34px; }
+.mb-kanban .ksec h3 { font-size: 17px; font-weight: 600; color: var(--mb-accent2); margin: 0 0 12px; }
+.mb-kanban .ksec h3.board-title { border-bottom: 1px solid var(--mb-border); padding-bottom: 8px; margin-bottom: 16px; }
+
+.mb-kanban .scope-tags { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 2px; }
+.mb-kanban .scope-tag { font-size: 13px; padding: 5px 13px; border: 1px solid var(--mb-border); border-radius: 14px; cursor: pointer; color: var(--mb-muted); user-select: none; transition: 0.12s; }
+.mb-kanban .scope-tag:hover { border-color: var(--mb-accent); color: var(--mb-text); }
+.mb-kanban .scope-tag.active { background: var(--mb-accent); color: #fff; border-color: var(--mb-accent); }
+
+.mb-kanban .stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 14px; margin-bottom: 0; }
+.mb-kanban .stat-card { background: var(--mb-bg3); border: 1px solid var(--mb-border); border-radius: 12px; padding: 16px; }
+.mb-kanban .stat-card .big { font-size: 30px; font-weight: 700; color: var(--mb-accent2); }
+.mb-kanban .stat-card .lbl { font-size: 12px; color: var(--mb-muted); margin-top: 4px; }
+.mb-kanban .stat-card .sub { font-size: 11px; color: var(--mb-muted); margin-top: 8px; }
+
+/* 统计范围占比卡片网格 */
+.mb-kanban .scope-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; }
+.mb-kanban .scope-card { background: var(--mb-bg3); border: 1px solid var(--mb-border); border-radius: 12px; padding: 16px; }
+.mb-kanban .scope-card-name { font-size: 13px; color: var(--mb-text); font-weight: 600; margin-bottom: 8px; }
+.mb-kanban .scope-card-big { font-size: 28px; font-weight: 700; color: var(--mb-accent2); line-height: 1.2; }
+.mb-kanban .scope-card-unit { font-size: 13px; font-weight: 400; color: var(--mb-muted); margin-left: 4px; }
+.mb-kanban .scope-card-meta { font-size: 12px; color: var(--mb-muted); margin-top: 6px; }
+.mb-kanban .bar { height: 10px; background: var(--mb-bg); border-radius: 6px; overflow: hidden; margin-top: 10px; }
+.mb-kanban .bar-fill { height: 100%; background: linear-gradient(90deg, var(--mb-accent), var(--mb-accent2)); }
+.mb-kanban .barrow { margin-bottom: 10px; }
+.mb-kanban .barrow .bt { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 3px; }
+.mb-kanban .barrow .bt b { color: var(--mb-text); }
+.mb-kanban .cloud { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; padding: 10px 4px; }
+.mb-kanban .cloud span { color: var(--mb-accent2); line-height: 1.1; }
+.mb-kanban .chips { display: flex; gap: 10px; flex-wrap: wrap; }
+.mb-kanban .chip { background: var(--mb-bg3); border: 1px solid var(--mb-border); border-radius: 20px; padding: 8px 16px; font-size: 13px; }
+.mb-kanban .chip b { color: var(--mb-accent2); font-size: 16px; margin-right: 4px; }
+.mb-kanban .sb { display: inline-block; font-size: 11px; border-radius: 20px; padding: 2px 10px; font-weight: 600; }
+.mb-kanban .sb.前期准备 { background: var(--mb-bg4); color: var(--mb-muted); }
+.mb-kanban .sb.口嗨中 { background: rgba(91, 156, 240, 0.2); color: var(--mb-blue); }
+.mb-kanban .sb.填坑中 { background: rgba(224, 168, 91, 0.2); color: var(--mb-orange); }
+.mb-kanban .sb.已完成 { background: rgba(76, 175, 125, 0.2); color: var(--mb-green); }
+.mb-kanban .status-sel { background: var(--mb-bg); border: 1px solid var(--mb-border); color: var(--mb-text); border-radius: 6px; padding: 2px 6px; font-size: 11px; width: auto; }
+
+.mb-kanban .entity-head { margin-bottom: 16px; }
+.mb-kanban .eh-row { display: flex; align-items: center; gap: 10px; background: var(--mb-bg2); border: 1px solid var(--mb-border); border-radius: 10px; padding: 8px 12px; }
+.mb-kanban .eh-desc { flex: 1; background: transparent; border: none; outline: none; font-size: 13px; color: var(--text-normal, var(--mb-text)); min-width: 0; }
+.mb-kanban .eh-desc::placeholder { color: var(--text-faint, var(--mb-muted)); }
+.mb-kanban .eh-tabs { display: flex; gap: 4px; flex-shrink: 0; }
+.mb-kanban .eh-tab { background: var(--mb-bg3); border: 1px solid var(--mb-border); border-radius: 6px; width: 30px; height: 30px; cursor: pointer; font-size: 15px; display: flex; align-items: center; justify-content: center; color: var(--mb-muted); transition: 0.12s; }
+.mb-kanban .eh-tab:hover { color: var(--mb-accent2); border-color: var(--mb-accent); }
+.mb-kanban .eh-tab.active { background: var(--mb-accent); border-color: var(--mb-accent); color: #fff; }
+
+/* 脑洞模块 */
+.mb-kanban .entity-mod { margin-bottom: 20px; }
+.mb-kanban .mod-title { font-size: 14px; font-weight: 600; color: var(--mb-accent2); margin: 0 0 10px; }
+.mb-kanban .eempty { color: var(--mb-muted); font-size: 13px; padding: 20px 0; text-align: center; }
+
+/* 模块 1：基本信息 */
+.mb-kanban .info-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+.mb-kanban .info-item { background: var(--mb-bg2); border: 1px solid var(--mb-border); border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
+.mb-kanban .info-k { color: var(--mb-muted); font-size: 12px; }
+.mb-kanban .info-v { color: var(--mb-accent2); font-weight: 600; font-size: 14px; }
+
+/* 模块 2：速览 */
+.mb-kanban .ov-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+.mb-kanban .ov-card { background: var(--mb-bg2); border: 1px solid var(--mb-border); border-radius: 10px; padding: 14px; cursor: pointer; transition: 0.12s; }
+.mb-kanban .ov-card:hover { border-color: var(--mb-accent); box-shadow: 0 4px 14px rgba(0,0,0,0.18); }
+.mb-kanban .ov-name { font-size: 13px; font-weight: 600; color: var(--mb-text); margin-bottom: 8px; word-break: break-all; }
+.mb-kanban .ov-meta { font-size: 12px; color: var(--mb-muted); margin-bottom: 10px; }
+.mb-kanban .ov-num { color: var(--mb-accent2); font-weight: 600; }
+.mb-kanban .ov-add { font-size: 12px; color: var(--mb-accent); text-align: center; border: 1px dashed var(--mb-border); border-radius: 6px; padding: 6px; transition: 0.12s; }
+.mb-kanban .ov-card:hover .ov-add { border-color: var(--mb-accent); background: var(--mb-bg3); }
+.mb-kanban .epop-close:hover { color: var(--text-error, #e53e3e); }
+.mb-kanban .time-pop .tp-k { color: var(--mb-muted); }
+.mb-kanban .time-pop .tp-v { color: var(--mb-accent2); font-weight: 600; }
+.mb-kanban .time-pop .tp-tip { color: var(--mb-muted); font-size: 11px; margin-top: 8px; line-height: 1.4; }
+
+.mb-kanban .ftree { background: var(--mb-bg3); border: 1px solid var(--mb-border); border-radius: 10px; padding: 10px 12px; }
+.mb-kanban .frow { display: flex; align-items: center; gap: 10px; padding: 5px 4px; }
+.mb-kanban .fname { cursor: pointer; color: var(--mb-accent2); }
+.mb-kanban .frow.note .fname { color: var(--mb-text); cursor: default; }
+.mb-kanban .fname:hover { color: var(--mb-accent2); text-decoration: underline; }
+.mb-kanban .fcount { font-size: 11px; color: var(--mb-muted); }
+.mb-kanban .fchildren { margin-left: 18px; border-left: 1px solid var(--mb-border); padding-left: 8px; }
+.mb-kanban .timeline { position: relative; padding-left: 18px; }
+.mb-kanban .tl-item { position: relative; padding: 0 0 16px 14px; border-left: 2px solid var(--mb-border); }
+.mb-kanban .tl-item:last-child { border-left-color: transparent; }
+.mb-kanban .tl-dot { position: absolute; left: -7px; top: 4px; width: 10px; height: 10px; border-radius: 50%; background: var(--mb-accent); }
+.mb-kanban .tl-date { font-size: 11px; color: var(--mb-accent2); }
+.mb-kanban .tl-title { font-weight: 600; margin: 2px 0; }
+.mb-kanban .tl-snip { font-size: 12px; color: var(--mb-muted); }
+
+/* 灵感收集卡片 + 配置页 */
+.mb-kanban .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 14px; }
+.mb-kanban .type-card { position: relative; background: var(--mb-bg3); border: 1px solid var(--mb-border); border-radius: 12px; padding: 16px 16px 14px; cursor: pointer; transition: 0.15s; }
+.mb-kanban .type-card:hover { border-color: var(--mb-accent); background: rgba(139, 108, 239, 0.08); }
+.mb-kanban .type-card .tc-name { font-size: 16px; font-weight: 600; color: var(--mb-accent2); margin-bottom: 6px; }
+.mb-kanban .type-card .tc-meta { font-size: 12px; color: var(--mb-muted); }
+.mb-kanban .type-card .tc-num { color: var(--mb-accent2); font-weight: 700; font-size: 15px; }
+.mb-kanban .type-card .tc-add { margin-top: 10px; font-size: 12px; color: var(--mb-accent); }
+.mb-kanban .type-card .loc { position: absolute; top: 10px; right: 10px; background: var(--mb-bg); border: 1px solid var(--mb-border); border-radius: 6px; cursor: pointer; font-size: 12px; padding: 2px 6px; color: var(--mb-muted); }
+.mb-kanban .type-card .loc:hover { color: var(--mb-accent2); border-color: var(--mb-accent); }
+
+/* 文件夹信息 / 子文件夹卡片配置 */
+.mb-kanban .meta-grid { display: flex; flex-wrap: wrap; gap: 10px 28px; }
+.mb-kanban .meta-row { display: flex; align-items: baseline; gap: 8px; font-size: 13px; }
+.mb-kanban .meta-k { color: var(--mb-muted); }
+.mb-kanban .meta-v { color: var(--mb-accent2); font-weight: 600; }
+.mb-kanban .sub-toggle-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.mb-kanban .sub-toggle { display: inline-flex; align-items: center; gap: 8px; background: var(--mb-bg3); border: 1px solid var(--mb-border); border-radius: 8px; padding: 6px 12px; cursor: pointer; font-size: 13px; transition: 0.15s; }
+.mb-kanban .sub-toggle:hover { border-color: var(--mb-accent); }
+.mb-kanban .sub-toggle .st-name { font-weight: 600; color: var(--mb-accent2); }
+.mb-kanban .sub-toggle .st-state { font-size: 11px; color: var(--mb-muted); }
+.mb-kanban .sub-toggle.off { opacity: 0.55; }
+.mb-kanban .sub-toggle.off .st-state { color: var(--mb-red, #c4564b); }
+.mb-kanban .sub-empty { font-size: 12px; color: var(--mb-muted); }
+.mb-kanban .cfgtab-list { display: flex; flex-direction: column; gap: 8px; max-width: 540px; }
+.mb-kanban .cfgtab { display: flex; align-items: center; justify-content: space-between; background: var(--mb-bg3); border: 1px solid var(--mb-border); border-radius: 10px; padding: 10px 14px; }
+.mb-kanban .cfgtab.off { opacity: 0.5; }
+.mb-kanban .cfgtab .ct-name { font-size: 14px; }
+.mb-kanban .cfgtab .ct-act { display: flex; gap: 6px; }
+.mb-kanban .cfgtab { cursor: grab; }
+.mb-kanban .cfgtab.dragging { opacity: 0.4; }
+.mb-kanban .cfgtab.dragover { border-color: var(--mb-accent); background: rgba(139, 108, 239, 0.12); }
+.mb-kanban .ct-handle { color: var(--mb-muted); margin-right: 8px; }
+
+/* 热力图：横向可滚动，按周分列（约 53 列 ≈ 12 个月） */
+.mb-kanban .hm-scroll { --hm: 15px; overflow-x: auto; overflow-y: hidden; padding-bottom: 6px; -webkit-overflow-scrolling: touch; cursor: grab; }
+.mb-kanban .hm-scroll:active { cursor: grabbing; }
+.mb-kanban .hm-scroll::-webkit-scrollbar { height: 8px; }
+.mb-kanban .hm-scroll::-webkit-scrollbar-thumb { background: var(--mb-bg4); border-radius: 4px; }
+.mb-kanban .hm-inner { display: inline-block; min-width: 100%; }
+.mb-kanban .hm-labels { display: grid; grid-auto-flow: column; grid-auto-columns: var(--hm); margin-bottom: 3px; }
+.mb-kanban .hm-ml { font-size: 10px; color: var(--mb-muted); white-space: nowrap; overflow: visible; }
+.mb-kanban .hm-grid { display: grid; grid-auto-flow: column; grid-template-rows: repeat(7, var(--hm)); grid-auto-columns: var(--hm); gap: 3px; }
+.mb-kanban .hm-cell { width: var(--hm); height: var(--hm); border-radius: 2px; background: var(--mb-bg); }
+
+/* ---------- 初次接入向导 ---------- */
+.mb-modal h4 { margin: 18px 0 6px; font-size: 13px; color: var(--mb-muted); font-weight: 600; }
+.mb-row { display: flex; gap: 10px; margin-top: 16px; }
+.mb-row.end { justify-content: flex-end; }
+.mb-btn.danger { background: var(--mb-red); border-color: var(--mb-red); color: #fff; font-weight: 600; }
+.mb-btn.danger:hover { filter: brightness(1.1); }
+.mb-danger { color: var(--mb-red); font-size: 13px; line-height: 1.6; }
+.adopt-row { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--mb-border); flex-wrap: wrap; }
+.adopt-name { min-width: 130px; font-size: 13px; color: var(--mb-text); }
+.adopt-opts { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; color: var(--mb-muted); }
+.adopt-opts label { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+.adopt-sel { background: var(--background-modifier-form-field, var(--mb-bg)); border: 1px solid var(--background-modifier-border, var(--mb-border)); color: var(--text-normal, var(--mb-text)); border-radius: 4px; padding: 1px 6px; font-size: 12.5px; vertical-align: middle; max-width: 160px; cursor: pointer; }
+.adopt-sel.adopt-cat { max-width: 90px; }
+.adopt-sel.adopt-sub { max-width: 130px; }
+.adopt-map { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 6px; width: 100%; }
+.adopt-branch { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.adopt-name-input { background: var(--background-modifier-form-field, var(--mb-bg)); border: 1px solid var(--background-modifier-border, var(--mb-border)); color: var(--text-normal, var(--mb-text)); border-radius: 4px; padding: 1px 6px; font-size: 12.5px; width: 120px; }
+.adopt-del-list { margin: 8px 0; max-height: 220px; overflow: auto; background: var(--mb-bg3); border: 1px solid var(--mb-border); border-radius: 8px; padding: 8px 12px; }
+.adopt-del-list div { font-family: monospace; font-size: 12px; padding: 3px 0; color: var(--mb-red); }
+.mb-kanban .hm-cell.lvl0 { background: var(--mb-hm0); }
+.mb-kanban .hm-cell.lvl1 { background: var(--mb-hm1); }
+.mb-kanban .hm-cell.lvl2 { background: var(--mb-hm2); }
+.mb-kanban .hm-cell.lvl3 { background: var(--mb-hm3); }
+.mb-kanban .hm-cell.lvl4 { background: var(--mb-hm4); }
+.mb-kanban .hm-legend { display: flex; align-items: center; gap: 5px; margin-top: 10px; font-size: 11px; color: var(--mb-muted); }
+.mb-kanban .hm-legend .hm-cell { width: 11px; height: 11px; }
+
+/* 模板库看板：方格矩阵（小方块，类热力图风格但非热力图） */
+.mb-kanban .tpl-sec { margin-bottom: 8px; }
+.mb-kanban .tpl-grid { padding: 8px 4px; max-width: 560px; }
+.mb-kanban .tpl-row { display: grid; grid-template-columns: 130px repeat(3, 1fr); gap: 10px; align-items: center; padding: 5px 0; }
+.mb-kanban .tpl-row + .tpl-row { border-top: 1px solid var(--mb-border); }
+.mb-kanban .tpl-name { padding: 2px 4px; font-size: 13px; color: var(--mb-accent2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mb-kanban .tpl-colhead { text-align: center; font-size: 12px; color: var(--mb-muted); }
+.mb-kanban .tpl-cell { width: 22px; height: 22px; border-radius: 3px; justify-self: center; align-self: center; cursor: pointer; transition: 0.12s; }
+.mb-kanban .tpl-cell:hover { transform: scale(1.15); box-shadow: 0 0 0 2px var(--mb-accent); }
+.mb-kanban .tpl-cell.tpl-on { background: var(--mb-green); }
+.mb-kanban .tpl-cell.tpl-empty { background: var(--mb-orange); }
+.mb-kanban .tpl-cell.tpl-off { background: #5a3a3e; }
+.mb-kanban .tpl-legend { display: flex; align-items: center; gap: 14px; margin-top: 12px; font-size: 11px; color: var(--mb-muted); flex-wrap: wrap; }
+.mb-kanban .tpl-legend .sq { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; }
+
+/* 修订记录列表 */
+.mb-kanban .rev-list .rev-item { background: var(--mb-bg); border: 1px solid var(--mb-border); border-radius: 8px; padding: 10px 12px; margin-bottom: 8px; }
+.mb-kanban .rev-item .rt { font-size: 11px; color: var(--mb-muted); }
+.mb-kanban .rev-item .rd { font-size: 12px; margin: 4px 0; }
+.mb-kanban .rev-item .rd .add { color: var(--mb-green); }
+.mb-kanban .rev-item .rd .del { color: var(--mb-red); }
+.mb-kanban .rev-item .rs { font-size: 12px; color: var(--mb-text); white-space: pre-wrap; }
+
+/* 通用说明文字 */
+.mb-kanban .muted { color: var(--mb-muted); font-size: 12px; }
+.mb-kanban p.muted { margin: 0 0 10px; }
