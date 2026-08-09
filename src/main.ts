@@ -26,7 +26,6 @@ interface MeowbiusSettings {
   cardHidden: Record<string, boolean>;
   statScope: string[];
   spaceStatus: Record<string, string>;
-  spaceDesc: Record<string, string>;
   initialized: boolean;
 }
 
@@ -37,7 +36,6 @@ const DEFAULT_SETTINGS: MeowbiusSettings = {
   cardHidden: {},
   statScope: [...C.STANDARD],
   spaceStatus: {},
-  spaceDesc: {},
   initialized: false,
 };
 
@@ -497,11 +495,6 @@ export default class MeowbiusPlugin extends Plugin {
 
   setSpaceStatus(name: string, status: string): void {
     this.settings.spaceStatus[name] = status;
-    void this.saveSettings();
-  }
-
-  setSpaceDesc(name: string, desc: string): void {
-    this.settings.spaceDesc[name] = desc;
     void this.saveSettings();
   }
 }

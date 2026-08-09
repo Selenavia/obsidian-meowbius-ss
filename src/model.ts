@@ -129,6 +129,7 @@ export async function buildModel(
     notes: 0,
   };
 
+  const notes: MNode[] = [];
   for (const f of files) {
     if (f instanceof TFolder) {
       map.set(f.path, {
@@ -139,12 +140,7 @@ export async function buildModel(
         words: 0,
         notes: 0,
       });
-    }
-  }
-
-  const notes: MNode[] = [];
-  for (const f of files) {
-    if (f instanceof TFile) {
+    } else if (f instanceof TFile) {
       const cache = app.metadataCache.getFileCache(f);
       const fm = cache?.frontmatter;
       const node: MNode = {

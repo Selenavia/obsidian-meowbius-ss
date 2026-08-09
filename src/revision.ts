@@ -56,21 +56,3 @@ export function recordModify(
   revs[path] = rec;
   return rec;
 }
-
-// 聚合近 12 个月逐日活动强度（用于热力图），返回 Date(天) -> 强度
-export function heatmapFromRevisions(
-  revs: Revisions,
-  since: number
-): Map<string, number> {
-  const map = new Map<string, number>();
-  for (const rec of Object.values(revs)) {
-    for (const e of rec.history) {
-      if (e.t < since) continue;
-      if (e.add <= 0) continue;
-      const d = new Date(e.t);
-      const key = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
-      map.set(key, (map.get(key) || 0) + e.add);
-    }
-  }
-  return map;
-}

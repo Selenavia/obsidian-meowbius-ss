@@ -331,41 +331,32 @@ export class AdoptionModal extends Modal {
           ? `${m.parent}/${src.name}`
           : `${m.parent}/${m.sub}`;
 
-      if (m.kind === "child") {
-        // 作为父级的直接子文件夹
-        const target = app.vault.getAbstractFileByPath(targetPath);
-        if (!target) {
-          try {
-            await app.vault.rename(src, targetPath);
-          } catch {
-            /* 忽略 */
-          }
-        } else if (target instanceof TFolder) {
-          await this.moveChildrenInto(src, target);
-          try {
-            await app.vault.trash(src, false);
-          } catch {
-            /* 忽略 */
-          }
+      // child 且目标不存在：直接把整个源文件夹改名搬过去（无需逐子项移动）
+      if (m.kind === "child" && !app.vault.getAbstractFileByPath(targetPath)) {
+        try {
+          await app.vault.rename(src, targetPath);
+        } catch {
+          /* 忽略 */
         }
-      } else {
-        // 并入父级的指定子文件夹
-        let target = app.vault.getAbstractFileByPath(targetPath);
-        if (!target) {
-          try {
-            await app.vault.createFolder(targetPath);
-            target = app.vault.getAbstractFileByPath(targetPath);
-          } catch {
-            /* 忽略 */
-          }
+        continue;
+      }
+
+      // 其余情况：确保目标文件夹存在 → 把源内子项移入 → 回收源文件夹
+      let target = app.vault.getAbstractFileByPath(targetPath);
+      if (!target) {
+        try {
+          await app.vault.createFolder(targetPath);
+          target = app.vault.getAbstractFileByPath(targetPath);
+        } catch {
+          /* 忽略 */
         }
-        if (target instanceof TFolder) {
-          await this.moveChildrenInto(src, target);
-          try {
-            await app.vault.trash(src, false);
-          } catch {
-            /* 忽略 */
-          }
+      }
+      if (target instanceof TFolder) {
+        await this.moveChildrenInto(src, target);
+        try {
+          await app.vault.trash(src, false);
+        } catch {
+          /* 忽略 */
         }
       }
     }

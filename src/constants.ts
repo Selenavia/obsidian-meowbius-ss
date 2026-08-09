@@ -14,9 +14,6 @@ export const STANDARD = [
   "06_衍生脑洞",
 ];
 
-// 精简脑洞空间（3 个子文件夹）
-export const MINIMAL = ["00_世界观设定", "02_人物", "04_片段口嗨"];
-
 // 灵感收集根目录下的 4 个子文件夹
 export const INSP_SUBFOLDERS = ["脑洞", "大纲", "只言片语", "知识补充"];
 

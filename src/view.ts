@@ -83,7 +83,7 @@ export class KanbanView extends ItemView {
     root.addClass("mb-view");
     const kanban = root.createDiv({ cls: "mb-kanban" });
     kanban.innerHTML = this.kanbanHTML(model);
-    this.wire(kanban, model);
+    this.wire(kanban);
   }
 
   /* ---------- 页签与排序 ---------- */
@@ -259,31 +259,15 @@ export class KanbanView extends ItemView {
 
   /** 模块 2：速览（各子文件夹文件数 / 总字数 / 新建入口） */
   private entityOverview(node: MNode): string {
-    const kids = (node.children || []).filter(
-      (c) => c.type === "folder" && !this.plugin.settings.cardHidden[c.path]
-    );
+    const cards = this.renderSubCards(node, true);
     let h = `<div class="ksec entity-mod"><h3 class="mod-title">⚡ 速览</h3>`;
-    if (!kids.length) {
-      h += `<div class="eempty">无子文件夹</div>`;
-    } else {
-      h += `<div class="ov-grid">`;
-      for (const ch of kids) {
-        const cp = ch.path;
-        h += `<div class="ov-card" data-newfile="${esc(cp)}">
-          <div class="ov-name">${esc(ch.name)}</div>
-          <div class="ov-meta"><span class="ov-num">${ch.notes}</span> 文件 · ${
-          ch.words
-        } 字</div>
-          <div class="ov-add">＋ 点击新建笔记</div>
-        </div>`;
-      }
-      h += `</div>`;
-    }
+    h += cards || `<div class="eempty">无子文件夹</div>`;
     h += `</div>`;
     return h;
   }
 
-  private folderCardsHTML(node: MNode): string {
+  /** 子文件夹卡片（速览 / 灵感收集共用）：文件数 + 字数 + 点击新建；showLocate 控制是否显示「定位」按钮 */
+  private renderSubCards(node: MNode, showLocate: boolean): string {
     const kids = (node.children || []).filter(
       (c) => c.type === "folder" && !this.plugin.settings.cardHidden[c.path]
     );
@@ -292,12 +276,12 @@ export class KanbanView extends ItemView {
     for (const ch of kids) {
       const cp = ch.path;
       h += `<div class="type-card" data-newfile="${esc(cp)}">
-        <button class="loc" data-focus="${esc(cp)}" title="在文件栏定位">📂</button>
+        ${showLocate ? `<button class="loc" data-focus="${esc(cp)}" title="在文件栏定位">📂</button>` : ""}
         <div class="tc-name">${esc(ch.name)}</div>
         <div class="tc-meta"><span class="tc-num">${ch.notes}</span> 个文件 · ${
         ch.words
       } 字</div>
-        <div class="tc-add">＋ 点击新建</div>
+        <div class="tc-add">＋ 点击新建笔记</div>
       </div>`;
     }
     h += `</div>`;
@@ -346,7 +330,7 @@ export class KanbanView extends ItemView {
     return (
       `<div class="ksec"><h3 class="board-title">📥 灵感收集</h3>` +
       this.folderMetaHTML(root) +
-      this.folderCardsHTML(root) +
+      this.renderSubCards(root, true) +
       `</div>` +
       this.heatmapSection(root.path + "/", "🔥 灵感收集活跃热力图（近 12 个月）")
     );
@@ -404,7 +388,6 @@ export class KanbanView extends ItemView {
 
   /* ---------- 配置 ---------- */
   private configHTML(model: VaultModel): string {
-    this.syncOrder(model);
     const order = this.plugin.settings.kanbanOrder;
     const hidden = this.plugin.settings.kanbanHidden;
     let h = `<div class="ksec"><h3 class="board-title">⚙️ 看板配置</h3><div class="cfgtab-list">`;
@@ -515,7 +498,7 @@ export class KanbanView extends ItemView {
   }
 
   /* ---------- 事件绑定 ---------- */
-  private wire(kanban: HTMLElement, _model: VaultModel): void {
+  private wire(kanban: HTMLElement): void {
     const plugin = this.plugin;
     kanban.querySelectorAll<HTMLElement>(".ktab").forEach((el) => {
       el.onclick = () => {

@@ -190,6 +190,7 @@ async function buildModel(app, rootName) {
     words: 0,
     notes: 0
   };
+  const notes = [];
   for (const f of files) {
     if (f instanceof import_obsidian.TFolder) {
       map.set(f.path, {
@@ -200,11 +201,7 @@ async function buildModel(app, rootName) {
         words: 0,
         notes: 0
       });
-    }
-  }
-  const notes = [];
-  for (const f of files) {
-    if (f instanceof import_obsidian.TFile) {
+    } else if (f instanceof import_obsidian.TFile) {
       const cache = app.metadataCache.getFileCache(f);
       const fm = cache?.frontmatter;
       const node = {
@@ -315,7 +312,7 @@ var KanbanView = class extends import_obsidian2.ItemView {
     root.addClass("mb-view");
     const kanban = root.createDiv({ cls: "mb-kanban" });
     kanban.innerHTML = this.kanbanHTML(model);
-    this.wire(kanban, model);
+    this.wire(kanban);
   }
   /* ---------- 页签与排序 ---------- */
   defaultOrder(model) {
@@ -466,28 +463,14 @@ var KanbanView = class extends import_obsidian2.ItemView {
   }
   /** 模块 2：速览（各子文件夹文件数 / 总字数 / 新建入口） */
   entityOverview(node) {
-    const kids = (node.children || []).filter(
-      (c) => c.type === "folder" && !this.plugin.settings.cardHidden[c.path]
-    );
+    const cards = this.renderSubCards(node, true);
     let h = `<div class="ksec entity-mod"><h3 class="mod-title">\u26A1 \u901F\u89C8</h3>`;
-    if (!kids.length) {
-      h += `<div class="eempty">\u65E0\u5B50\u6587\u4EF6\u5939</div>`;
-    } else {
-      h += `<div class="ov-grid">`;
-      for (const ch of kids) {
-        const cp = ch.path;
-        h += `<div class="ov-card" data-newfile="${esc(cp)}">
-          <div class="ov-name">${esc(ch.name)}</div>
-          <div class="ov-meta"><span class="ov-num">${ch.notes}</span> \u6587\u4EF6 \xB7 ${ch.words} \u5B57</div>
-          <div class="ov-add">\uFF0B \u70B9\u51FB\u65B0\u5EFA\u7B14\u8BB0</div>
-        </div>`;
-      }
-      h += `</div>`;
-    }
+    h += cards || `<div class="eempty">\u65E0\u5B50\u6587\u4EF6\u5939</div>`;
     h += `</div>`;
     return h;
   }
-  folderCardsHTML(node) {
+  /** 子文件夹卡片（速览 / 灵感收集共用）：文件数 + 字数 + 点击新建；showLocate 控制是否显示「定位」按钮 */
+  renderSubCards(node, showLocate) {
     const kids = (node.children || []).filter(
       (c) => c.type === "folder" && !this.plugin.settings.cardHidden[c.path]
     );
@@ -496,10 +479,10 @@ var KanbanView = class extends import_obsidian2.ItemView {
     for (const ch of kids) {
       const cp = ch.path;
       h += `<div class="type-card" data-newfile="${esc(cp)}">
-        <button class="loc" data-focus="${esc(cp)}" title="\u5728\u6587\u4EF6\u680F\u5B9A\u4F4D">\u{1F4C2}</button>
+        ${showLocate ? `<button class="loc" data-focus="${esc(cp)}" title="\u5728\u6587\u4EF6\u680F\u5B9A\u4F4D">\u{1F4C2}</button>` : ""}
         <div class="tc-name">${esc(ch.name)}</div>
         <div class="tc-meta"><span class="tc-num">${ch.notes}</span> \u4E2A\u6587\u4EF6 \xB7 ${ch.words} \u5B57</div>
-        <div class="tc-add">\uFF0B \u70B9\u51FB\u65B0\u5EFA</div>
+        <div class="tc-add">\uFF0B \u70B9\u51FB\u65B0\u5EFA\u7B14\u8BB0</div>
       </div>`;
     }
     h += `</div>`;
@@ -537,7 +520,7 @@ var KanbanView = class extends import_obsidian2.ItemView {
     const root = model.inspRoot;
     if (!root)
       return `<p class="muted">\u672A\u627E\u5230\u300C${esc(model.rootName)}\u300D\u6839\u76EE\u5F55\u3002</p>`;
-    return `<div class="ksec"><h3 class="board-title">\u{1F4E5} \u7075\u611F\u6536\u96C6</h3>` + this.folderMetaHTML(root) + this.folderCardsHTML(root) + `</div>` + this.heatmapSection(root.path + "/", "\u{1F525} \u7075\u611F\u6536\u96C6\u6D3B\u8DC3\u70ED\u529B\u56FE\uFF08\u8FD1 12 \u4E2A\u6708\uFF09");
+    return `<div class="ksec"><h3 class="board-title">\u{1F4E5} \u7075\u611F\u6536\u96C6</h3>` + this.folderMetaHTML(root) + this.renderSubCards(root, true) + `</div>` + this.heatmapSection(root.path + "/", "\u{1F525} \u7075\u611F\u6536\u96C6\u6D3B\u8DC3\u70ED\u529B\u56FE\uFF08\u8FD1 12 \u4E2A\u6708\uFF09");
   }
   /* ---------- 模板库看板 ---------- */
   templateBoardHTML(model) {
@@ -588,7 +571,6 @@ var KanbanView = class extends import_obsidian2.ItemView {
   }
   /* ---------- 配置 ---------- */
   configHTML(model) {
-    this.syncOrder(model);
     const order = this.plugin.settings.kanbanOrder;
     const hidden = this.plugin.settings.kanbanHidden;
     let h = `<div class="ksec"><h3 class="board-title">\u2699\uFE0F \u770B\u677F\u914D\u7F6E</h3><div class="cfgtab-list">`;
@@ -690,7 +672,7 @@ var KanbanView = class extends import_obsidian2.ItemView {
     </div>`;
   }
   /* ---------- 事件绑定 ---------- */
-  wire(kanban, _model) {
+  wire(kanban) {
     const plugin = this.plugin;
     kanban.querySelectorAll(".ktab").forEach((el) => {
       el.onclick = () => {
@@ -1087,35 +1069,26 @@ var AdoptionModal = class extends import_obsidian3.Modal {
         await this.plugin.ensureTemplateFiles(sp);
       }
       const targetPath = m.kind === "child" ? `${m.parent}/${src.name}` : `${m.parent}/${m.sub}`;
-      if (m.kind === "child") {
-        const target = app.vault.getAbstractFileByPath(targetPath);
-        if (!target) {
-          try {
-            await app.vault.rename(src, targetPath);
-          } catch {
-          }
-        } else if (target instanceof import_obsidian3.TFolder) {
-          await this.moveChildrenInto(src, target);
-          try {
-            await app.vault.trash(src, false);
-          } catch {
-          }
+      if (m.kind === "child" && !app.vault.getAbstractFileByPath(targetPath)) {
+        try {
+          await app.vault.rename(src, targetPath);
+        } catch {
         }
-      } else {
-        let target = app.vault.getAbstractFileByPath(targetPath);
-        if (!target) {
-          try {
-            await app.vault.createFolder(targetPath);
-            target = app.vault.getAbstractFileByPath(targetPath);
-          } catch {
-          }
+        continue;
+      }
+      let target = app.vault.getAbstractFileByPath(targetPath);
+      if (!target) {
+        try {
+          await app.vault.createFolder(targetPath);
+          target = app.vault.getAbstractFileByPath(targetPath);
+        } catch {
         }
-        if (target instanceof import_obsidian3.TFolder) {
-          await this.moveChildrenInto(src, target);
-          try {
-            await app.vault.trash(src, false);
-          } catch {
-          }
+      }
+      if (target instanceof import_obsidian3.TFolder) {
+        await this.moveChildrenInto(src, target);
+        try {
+          await app.vault.trash(src, false);
+        } catch {
         }
       }
     }
@@ -1183,7 +1156,6 @@ var DEFAULT_SETTINGS = {
   cardHidden: {},
   statScope: [...STANDARD],
   spaceStatus: {},
-  spaceDesc: {},
   initialized: false
 };
 function firstLineSummary(content, max = 40) {
@@ -1580,10 +1552,6 @@ var MeowbiusPlugin = class extends import_obsidian4.Plugin {
   }
   setSpaceStatus(name, status) {
     this.settings.spaceStatus[name] = status;
-    void this.saveSettings();
-  }
-  setSpaceDesc(name, desc) {
-    this.settings.spaceDesc[name] = desc;
     void this.saveSettings();
   }
 };
