@@ -477,7 +477,7 @@ var KanbanView = class extends import_obsidian2.ItemView {
     const shown = all.filter((c) => isTypeFolder(c.name));
     let h = `<div class="ksec entity-mod"><h3 class="mod-title">\u26A1 \u901F\u89C8</h3>`;
     if (shown.length) {
-      h += this.renderSubCards(node, true);
+      h += this.renderSubCards(node, false);
     } else {
       h += `<div class="eempty">
         <div class="ee-main">\u8BE5\u8111\u6D1E\u4E0B\u6682\u65E0\u300C\u6570\u5B57_\u6587\u5B57\u300D\u683C\u5F0F\u7684\u5C55\u793A\u578B\u5B50\u6587\u4EF6\u5939\u3002</div>
@@ -691,12 +691,6 @@ var KanbanView = class extends import_obsidian2.ItemView {
       el.onclick = () => {
         plugin.setSpaceStatus(el.dataset.spacename, el.dataset.spacestatus);
         void this.render();
-      };
-    });
-    kanban.querySelectorAll("[data-focus]").forEach((el) => {
-      el.onclick = (e) => {
-        e.stopPropagation();
-        plugin.revealPath(el.dataset.focus);
       };
     });
     kanban.querySelectorAll("[data-tpledit]").forEach((el) => {

@@ -142,8 +142,6 @@
 .mb-kanban .type-card .tc-meta { font-size: 12px; color: var(--mb-muted); }
 .mb-kanban .type-card .tc-num { color: var(--mb-accent2); font-weight: 700; font-size: 15px; }
 .mb-kanban .type-card .tc-add { margin-top: 10px; font-size: 12px; color: var(--mb-accent); }
-.mb-kanban .type-card .loc { position: absolute; top: 10px; right: 10px; background: var(--mb-bg); border: 1px solid var(--mb-border); border-radius: 6px; cursor: pointer; font-size: 12px; padding: 2px 6px; color: var(--mb-muted); }
-.mb-kanban .type-card .loc:hover { color: var(--mb-accent2); border-color: var(--mb-accent); }
 
 /* 文件夹信息 */
 .mb-kanban .meta-grid { display: flex; flex-wrap: wrap; gap: 10px 28px; }

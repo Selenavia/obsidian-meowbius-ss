@@ -276,7 +276,7 @@ export class KanbanView extends ItemView {
     const shown = all.filter((c) => isTypeFolder(c.name));
     let h = `<div class="ksec entity-mod"><h3 class="mod-title">⚡ 速览</h3>`;
     if (shown.length) {
-      h += this.renderSubCards(node, true);
+      h += this.renderSubCards(node, false);
     } else {
       h += `<div class="eempty">
         <div class="ee-main">该脑洞下暂无「数字_文字」格式的展示型子文件夹。</div>
@@ -524,12 +524,6 @@ export class KanbanView extends ItemView {
       el.onclick = () => {
         plugin.setSpaceStatus(el.dataset.spacename!, el.dataset.spacestatus!);
         void this.render();
-      };
-    });
-    kanban.querySelectorAll<HTMLElement>("[data-focus]").forEach((el) => {
-      el.onclick = (e) => {
-        e.stopPropagation();
-        plugin.revealPath(el.dataset.focus!);
       };
     });
     kanban.querySelectorAll<HTMLElement>("[data-tpledit]").forEach((el) => {
