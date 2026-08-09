@@ -313,6 +313,7 @@ var KanbanView = class extends import_obsidian2.ItemView {
     const kanban = root.createDiv({ cls: "mb-kanban" });
     kanban.innerHTML = this.kanbanHTML(model);
     this.wire(kanban);
+    await this.fillTimeline(kanban);
   }
   /* ---------- 页签与排序 ---------- */
   defaultOrder(model) {
@@ -445,6 +446,9 @@ var KanbanView = class extends import_obsidian2.ItemView {
     h += this.entityBasicInfo(node);
     h += this.entityOverview(node);
     h += this.heatmapSection(node.path + "/", "\u{1F525} \u6D3B\u8DC3\u70ED\u529B\u56FE\uFF08\u8FD1 12 \u4E2A\u6708\uFF09");
+    h += `<div class="ksec entity-mod" data-tlspace="${esc(
+      node.path
+    )}"><h3 class="mod-title">\u{1F570}\uFE0F \u65F6\u95F4\u8F74</h3><div class="tl-body"><div class="tl-loading">\u52A0\u8F7D\u4E2D\u2026</div></div></div>`;
     return h;
   }
   /** 模块 1：基本信息（创建时间 / 最近更新 / 总字数 / 总文件数 / 状态） */
@@ -672,6 +676,96 @@ var KanbanView = class extends import_obsidian2.ItemView {
       </div></div>
       <div class="hm-legend"><span>\u5C11</span><span class="hm-cell lvl0"></span><span class="hm-cell lvl1"></span><span class="hm-cell lvl2"></span><span class="hm-cell lvl3"></span><span class="hm-cell lvl4"></span><span>\u591A</span></div>
     </div>`;
+  }
+  /* ---------- 时间轴（模块 4，异步加载） ---------- */
+  async fillTimeline(kanban) {
+    if (this.kanbanTab === "config" || this.kanbanTab === "overview" || this.kanbanTab === "\u7075\u611F\u6536\u96C6" || this.kanbanTab === "\u6A21\u677F\u5E93") return;
+    const box = kanban.querySelector("[data-tlspace]");
+    if (!box) return;
+    const spacePath = box.dataset.tlspace;
+    const body = box.querySelector(".tl-body");
+    if (!body) return;
+    const entries = await this.plugin.loadTimelineEntries(spacePath);
+    body.innerHTML = this.timelineNodesHTML(entries, spacePath);
+    this.bindTimeline(box, spacePath);
+  }
+  timelineNodesHTML(entries, spacePath) {
+    let h = `<button class="mb-btn primary tl-new" data-tlnew="${esc(
+      spacePath
+    )}">\uFF0B \u65B0\u589E\u65F6\u95F4\u8282\u70B9</button>`;
+    if (!entries.length) {
+      h += `<div class="tl-empty">\u8BE5\u8111\u6D1E\u7684\u300C\u65F6\u95F4\u8F74\u300D\u6587\u4EF6\u5939\u6682\u65E0\u8282\u70B9\u3002\u70B9\u51FB\u4E0A\u65B9\u6309\u94AE\u65B0\u589E\uFF0C\u6216\u786E\u8BA4\u662F\u5426\u5B58\u5728\u300C01_\u65F6\u95F4\u8F74\u300D\u6587\u4EF6\u5939\u3002</div>`;
+      return h;
+    }
+    h += `<div class="tl-list">`;
+    for (const e of entries) {
+      const date = new Date(e.mtime).toLocaleDateString("zh-CN");
+      h += `<div class="tl-node" data-tlpath="${esc(e.path)}">
+        <div class="tl-dot"></div>
+        <div class="tl-card">
+          <div class="tl-head">
+            <span class="tl-title" data-tlopen="${esc(e.path)}" title="\u5728\u7F16\u8F91\u5668\u6253\u5F00">${esc(
+        e.title
+      )}</span>
+            <span class="tl-actions">
+              <button class="tl-btn" data-tledit="${esc(
+        e.path
+      )}" title="\u5FEB\u901F\u7F16\u8F91">\u270F\uFE0F</button>
+            </span>
+          </div>
+          <div class="tl-snippet">${e.snippet ? esc(e.snippet) : '<span class="muted">(\u7A7A)</span>'}</div>
+          <div class="tl-meta">${e.words} \u5B57 \xB7 \u66F4\u65B0\u4E8E ${date}</div>
+        </div>
+      </div>`;
+    }
+    h += `</div>`;
+    return h;
+  }
+  bindTimeline(box, _spacePath) {
+    box.querySelectorAll("[data-tlnew]").forEach((el) => {
+      el.onclick = () => void this.plugin.quickCreateTimeline(el.dataset.tlnew);
+    });
+    box.querySelectorAll("[data-tlopen]").forEach((el) => {
+      el.onclick = () => this.plugin.openFilePath(el.dataset.tlopen);
+    });
+    box.querySelectorAll("[data-tledit]").forEach((el) => {
+      el.onclick = () => void this.beginInlineEdit(el.dataset.tledit);
+    });
+  }
+  // 内联编辑：把节点卡片替换为 textarea，保存走 vault.modify
+  async beginInlineEdit(path) {
+    const node = Array.from(
+      this.contentEl.querySelectorAll(".tl-node")
+    ).find((n) => n.dataset.tlpath === path);
+    if (!node) return;
+    const card = node.querySelector(".tl-card");
+    if (!card) return;
+    const content = await this.plugin.readNote(path);
+    card.innerHTML = `<textarea class="tl-edit" data-tltext>${esc(
+      content
+    )}</textarea><div class="tl-edit-bar">
+      <button class="mb-btn primary" data-tlsave="${esc(
+      path
+    )}">\u4FDD\u5B58</button>
+      <button class="mb-btn ghost" data-tlcancel>\u53D6\u6D88</button>
+    </div>`;
+    const ta = card.querySelector(".tl-edit");
+    ta?.focus();
+    ta?.addEventListener("keydown", (ev) => {
+      if ((ev.ctrlKey || ev.metaKey) && ev.key === "Enter") {
+        ev.preventDefault();
+        card.querySelector("[data-tlsave]")?.click();
+      }
+    });
+    card.querySelector("[data-tlcancel]").onclick = () => {
+      void this.render();
+    };
+    card.querySelector("[data-tlsave]").onclick = async () => {
+      const val = card.querySelector(".tl-edit")?.value ?? "";
+      await this.plugin.saveNote(path, val);
+      new import_obsidian2.Notice("\u5DF2\u4FDD\u5B58\uFF1A" + path.split("/").pop());
+      void this.render();
+    };
   }
   /* ---------- 事件绑定 ---------- */
   wire(kanban) {
@@ -1496,6 +1590,112 @@ var MeowbiusPlugin = class extends import_obsidian4.Plugin {
   // 供视图使用：定位节点
   nodeByPath(path) {
     return this.model ? findNode(this.model, path) : void 0;
+  }
+  /* ---------------- 时间轴（脑洞空间 01_时间轴 文件夹） ---------------- */
+  // 取某脑洞空间下「时间轴」类型文件夹的路径（按核心词匹配，兼容任意前缀命名）
+  async timelineFolderPath(spacePath) {
+    const node = this.nodeByPath(spacePath);
+    if (!node) return void 0;
+    const core = normalizeName(STANDARD[1]);
+    const child = (node.children || []).find(
+      (c) => c.type === "folder" && normalizeName(c.name) === core
+    );
+    return child?.path;
+  }
+  // 读取时间轴节点（按文件名数字前缀升序）
+  async loadTimelineEntries(spacePath) {
+    const tlPath = await this.timelineFolderPath(spacePath);
+    if (!tlPath) return [];
+    const folder = this.app.vault.getAbstractFileByPath(tlPath);
+    if (!(folder instanceof import_obsidian4.TFolder)) return [];
+    const files = (folder.children || []).filter(
+      (c) => c instanceof import_obsidian4.TFile
+    );
+    const entries = [];
+    for (const f of files) {
+      let content = "";
+      try {
+        content = await this.app.vault.cachedRead(f);
+      } catch {
+        content = "";
+      }
+      const body = content.replace(/^---\n[\s\S]*?\n---\n?/, "").replace(/[#>*`\-]/g, "").replace(/\s+/g, " ").trim();
+      const title = f.name.replace(/^(\d+)[._\-\s]*/, "").replace(/\.md$/i, "");
+      entries.push({
+        path: f.path,
+        name: f.name,
+        title: title || f.name,
+        mtime: f.stat.mtime,
+        words: content.replace(/\s/g, "").length,
+        snippet: body.slice(0, 120)
+      });
+    }
+    entries.sort((a, b) => {
+      const na = parseInt((a.name.match(/^(\d+)/) || [])[1] || "NaN", 10);
+      const nb = parseInt((b.name.match(/^(\d+)/) || [])[1] || "NaN", 10);
+      if (!isNaN(na) && !isNaN(nb)) return na - nb;
+      if (!isNaN(na)) return -1;
+      if (!isNaN(nb)) return 1;
+      return a.name.localeCompare(b.name);
+    });
+    return entries;
+  }
+  // 读取单条笔记完整内容（供内联编辑预填）
+  async readNote(path) {
+    const f = this.app.vault.getAbstractFileByPath(path);
+    if (f instanceof import_obsidian4.TFile) {
+      try {
+        return await this.app.vault.cachedRead(f);
+      } catch {
+        return "";
+      }
+    }
+    return "";
+  }
+  // 保存单条笔记内容
+  async saveNote(path, content) {
+    const f = this.app.vault.getAbstractFileByPath(path);
+    if (f instanceof import_obsidian4.TFile) await this.app.vault.modify(f, content);
+  }
+  // 在时间轴文件夹中新建一个节点（自动递增数字前缀）
+  async quickCreateTimeline(spacePath) {
+    let tlPath = await this.timelineFolderPath(spacePath);
+    if (!tlPath) {
+      tlPath = `${spacePath}/${STANDARD[1]}`;
+      try {
+        await this.app.vault.createFolder(tlPath);
+      } catch {
+      }
+    }
+    const folder = this.app.vault.getAbstractFileByPath(tlPath);
+    if (!(folder instanceof import_obsidian4.TFolder)) {
+      new import_obsidian4.Notice("\u65E0\u6CD5\u5B9A\u4F4D\u65F6\u95F4\u8F74\u6587\u4EF6\u5939\uFF1A" + tlPath);
+      return;
+    }
+    const existing = (folder.children || []).filter((c) => c instanceof import_obsidian4.TFile).map((c) => c.name);
+    let max = 0;
+    for (const n of existing) {
+      const m = n.match(/^(\d+)/);
+      if (m) max = Math.max(max, parseInt(m[1], 10));
+    }
+    const prefix = String(max + 1).padStart(4, "0");
+    let name = `${prefix}_\u65B0\u8282\u70B9.md`;
+    let i = 1;
+    while (existing.includes(name)) name = `${prefix}_\u65B0\u8282\u70B9_${i++}.md`;
+    const content = `---
+\u65F6\u95F4: 
+---
+
+# \u65B0\u8282\u70B9
+
+`;
+    try {
+      await this.app.vault.create(`${tlPath}/${name}`, content);
+      new import_obsidian4.Notice(`\u5DF2\u65B0\u5EFA\u65F6\u95F4\u8282\u70B9\uFF1A${name}`);
+      this.renderOpenView();
+    } catch {
+      new import_obsidian4.Notice("\u65B0\u5EFA\u65F6\u95F4\u8282\u70B9\u5931\u8D25");
+    }
   }
   // 当前仓库中所有「类型」名（STANDARD ∪ 各脑洞下 数字_文字 子文件夹）
   allTypeNames() {

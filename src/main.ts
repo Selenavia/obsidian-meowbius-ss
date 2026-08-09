@@ -11,7 +11,14 @@ import {
 } from "obsidian";
 import { KanbanView, VIEW_TYPE } from "./view";
 import { AdoptionModal } from "./adopt";
-import { buildModel, VaultModel, MNode, findNode, spaceTypes } from "./model";
+import {
+  buildModel,
+  VaultModel,
+  MNode,
+  findNode,
+  spaceTypes,
+  TimelineEntry,
+} from "./model";
 import {
   Revisions,
   ensureRecord,
@@ -436,6 +443,121 @@ export default class MeowbiusPlugin extends Plugin {
   // 供视图使用：定位节点
   nodeByPath(path: string): MNode | undefined {
     return this.model ? findNode(this.model, path) : undefined;
+  }
+
+  /* ---------------- 时间轴（脑洞空间 01_时间轴 文件夹） ---------------- */
+
+  // 取某脑洞空间下「时间轴」类型文件夹的路径（按核心词匹配，兼容任意前缀命名）
+  async timelineFolderPath(spacePath: string): Promise<string | undefined> {
+    const node = this.nodeByPath(spacePath);
+    if (!node) return undefined;
+    const core = C.normalizeName(C.STANDARD[1]); // "时间轴"
+    const child = (node.children || []).find(
+      (c) => c.type === "folder" && C.normalizeName(c.name) === core
+    );
+    return child?.path;
+  }
+
+  // 读取时间轴节点（按文件名数字前缀升序）
+  async loadTimelineEntries(spacePath: string): Promise<TimelineEntry[]> {
+    const tlPath = await this.timelineFolderPath(spacePath);
+    if (!tlPath) return [];
+    const folder = this.app.vault.getAbstractFileByPath(tlPath);
+    if (!(folder instanceof TFolder)) return [];
+    const files = (folder.children || []).filter(
+      (c) => c instanceof TFile
+    ) as TFile[];
+    const entries: TimelineEntry[] = [];
+    for (const f of files) {
+      let content = "";
+      try {
+        content = await this.app.vault.cachedRead(f);
+      } catch {
+        content = "";
+      }
+      const body = content
+        .replace(/^---\n[\s\S]*?\n---\n?/, "")
+        .replace(/[#>*`\-]/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+      const title = f.name
+        .replace(/^(\d+)[._\-\s]*/, "")
+        .replace(/\.md$/i, "");
+      entries.push({
+        path: f.path,
+        name: f.name,
+        title: title || f.name,
+        mtime: f.stat.mtime,
+        words: content.replace(/\s/g, "").length,
+        snippet: body.slice(0, 120),
+      });
+    }
+    entries.sort((a, b) => {
+      const na = parseInt((a.name.match(/^(\d+)/) || [])[1] || "NaN", 10);
+      const nb = parseInt((b.name.match(/^(\d+)/) || [])[1] || "NaN", 10);
+      if (!isNaN(na) && !isNaN(nb)) return na - nb;
+      if (!isNaN(na)) return -1;
+      if (!isNaN(nb)) return 1;
+      return a.name.localeCompare(b.name);
+    });
+    return entries;
+  }
+
+  // 读取单条笔记完整内容（供内联编辑预填）
+  async readNote(path: string): Promise<string> {
+    const f = this.app.vault.getAbstractFileByPath(path);
+    if (f instanceof TFile) {
+      try {
+        return await this.app.vault.cachedRead(f);
+      } catch {
+        return "";
+      }
+    }
+    return "";
+  }
+
+  // 保存单条笔记内容
+  async saveNote(path: string, content: string): Promise<void> {
+    const f = this.app.vault.getAbstractFileByPath(path);
+    if (f instanceof TFile) await this.app.vault.modify(f, content);
+  }
+
+  // 在时间轴文件夹中新建一个节点（自动递增数字前缀）
+  async quickCreateTimeline(spacePath: string): Promise<void> {
+    let tlPath = await this.timelineFolderPath(spacePath);
+    if (!tlPath) {
+      tlPath = `${spacePath}/${C.STANDARD[1]}`;
+      try {
+        await this.app.vault.createFolder(tlPath);
+      } catch {
+        /* 已存在则忽略 */
+      }
+    }
+    const folder = this.app.vault.getAbstractFileByPath(tlPath);
+    if (!(folder instanceof TFolder)) {
+      new Notice("无法定位时间轴文件夹：" + tlPath);
+      return;
+    }
+    const existing = (folder.children || [])
+      .filter((c) => c instanceof TFile)
+      .map((c) => (c as TFile).name);
+    let max = 0;
+    for (const n of existing) {
+      const m = n.match(/^(\d+)/);
+      if (m) max = Math.max(max, parseInt(m[1], 10));
+    }
+    const prefix = String(max + 1).padStart(4, "0");
+    let name = `${prefix}_新节点.md`;
+    let i = 1;
+    while (existing.includes(name)) name = `${prefix}_新节点_${i++}.md`;
+    const content = `---\n时间: \n---\n\n# 新节点\n\n`;
+    try {
+      await this.app.vault.create(`${tlPath}/${name}`, content);
+      new Notice(`已新建时间节点：${name}`);
+      this.renderOpenView();
+    } catch {
+      new Notice("新建时间节点失败");
+    }
   }
 
   // 当前仓库中所有「类型」名（STANDARD ∪ 各脑洞下 数字_文字 子文件夹）

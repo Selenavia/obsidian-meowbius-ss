@@ -196,6 +196,25 @@
 .mb-kanban .hm-legend { display: flex; align-items: center; gap: 5px; margin-top: 10px; font-size: 11px; color: var(--mb-muted); }
 .mb-kanban .hm-legend .hm-cell { width: 11px; height: 11px; }
 
+/* 时间轴模块（脑洞空间：读取 01_时间轴 文件夹，按数字前缀排序） */
+.mb-kanban .tl-new { margin-bottom: 14px; }
+.mb-kanban .tl-loading, .mb-kanban .tl-empty { color: var(--mb-muted); font-size: 13px; padding: 18px 12px; text-align: center; background: var(--mb-bg2); border: 1px dashed var(--mb-border); border-radius: 10px; }
+.mb-kanban .tl-list { position: relative; margin-left: 6px; padding-left: 22px; border-left: 2px solid var(--mb-border); }
+.mb-kanban .tl-node { position: relative; margin-bottom: 12px; }
+.mb-kanban .tl-dot { position: absolute; left: -29px; top: 6px; width: 12px; height: 12px; border-radius: 50%; background: var(--mb-accent); border: 2px solid var(--mb-bg); box-shadow: 0 0 0 2px var(--mb-border); }
+.mb-kanban .tl-card { background: var(--mb-bg2); border: 1px solid var(--mb-border); border-radius: 10px; padding: 12px 14px; transition: 0.12s; }
+.mb-kanban .tl-card:hover { border-color: var(--mb-accent); }
+.mb-kanban .tl-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.mb-kanban .tl-title { font-size: 13px; font-weight: 600; color: var(--mb-text); cursor: pointer; word-break: break-all; }
+.mb-kanban .tl-title:hover { color: var(--mb-accent2); text-decoration: underline; }
+.mb-kanban .tl-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.mb-kanban .tl-btn { background: var(--mb-bg3); border: 1px solid var(--mb-border); border-radius: 6px; width: 28px; height: 28px; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; color: var(--mb-muted); transition: 0.12s; }
+.mb-kanban .tl-btn:hover { color: var(--mb-accent2); border-color: var(--mb-accent); }
+.mb-kanban .tl-snippet { font-size: 12px; color: var(--mb-muted); margin: 8px 0; line-height: 1.6; max-height: 4.8em; overflow: hidden; }
+.mb-kanban .tl-meta { font-size: 11px; color: var(--mb-muted); }
+.mb-kanban .tl-edit { width: 100%; min-height: 180px; resize: vertical; background: var(--mb-bg); color: var(--mb-text); border: 1px solid var(--mb-border); border-radius: 8px; padding: 10px; font-size: 13px; line-height: 1.6; font-family: var(--font-monospace, monospace); box-sizing: border-box; }
+.mb-kanban .tl-edit-bar { display: flex; gap: 8px; justify-content: flex-end; margin-top: 8px; }
+
 /* 模板库看板：方格矩阵（小方块，类热力图风格但非热力图） */
 .mb-kanban .tpl-sec { margin-bottom: 8px; }
 .mb-kanban .tpl-grid { padding: 8px 4px; max-width: 560px; }

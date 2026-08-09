@@ -24,6 +24,16 @@ export interface VaultModel {
   spaces: MNode[]; // 脑洞空间（顶级文件夹，排除 rootName 与 模板库）
 }
 
+// 时间轴节点（取自脑洞空间下「时间轴」文件夹中的每个笔记）
+export interface TimelineEntry {
+  path: string; // 笔记完整路径
+  name: string; // 文件名（含 .md）
+  title: string; // 去数字前缀与扩展名后的标题
+  mtime: number; // 最近修改时间
+  words: number; // 字数（去空白字符数）
+  snippet: string; // 正文摘要（剥 frontmatter，前 ~120 字）
+}
+
 export function findNode(model: VaultModel, path: string): MNode | undefined {
   return model.map.get(path);
 }

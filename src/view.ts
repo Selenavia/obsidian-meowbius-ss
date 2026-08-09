@@ -1,6 +1,6 @@
-import { ItemView, WorkspaceLeaf, Modal } from "obsidian";
+import { ItemView, WorkspaceLeaf, Modal, Notice } from "obsidian";
 import type MeowbiusPlugin from "./main";
-import { MNode, VaultModel, scopeStats, collectCharacters } from "./model";
+import { MNode, VaultModel, scopeStats, collectCharacters, TimelineEntry } from "./model";
 import {
   STATUSES,
   STANDARD,
@@ -85,6 +85,7 @@ export class KanbanView extends ItemView {
     const kanban = root.createDiv({ cls: "mb-kanban" });
     kanban.innerHTML = this.kanbanHTML(model);
     this.wire(kanban);
+    await this.fillTimeline(kanban);
   }
 
   /* ---------- 页签与排序 ---------- */
@@ -238,6 +239,10 @@ export class KanbanView extends ItemView {
     h += this.entityOverview(node);
     // 模块 3：热力图
     h += this.heatmapSection(node.path + "/", "🔥 活跃热力图（近 12 个月）");
+    // 模块 4：时间轴（异步加载，见 fillTimeline）
+    h += `<div class="ksec entity-mod" data-tlspace="${esc(
+      node.path
+    )}"><h3 class="mod-title">🕰️ 时间轴</h3><div class="tl-body"><div class="tl-loading">加载中…</div></div></div>`;
     return h;
   }
 
@@ -504,6 +509,105 @@ export class KanbanView extends ItemView {
       </div></div>
       <div class="hm-legend"><span>少</span><span class="hm-cell lvl0"></span><span class="hm-cell lvl1"></span><span class="hm-cell lvl2"></span><span class="hm-cell lvl3"></span><span class="hm-cell lvl4"></span><span>多</span></div>
     </div>`;
+  }
+
+  /* ---------- 时间轴（模块 4，异步加载） ---------- */
+  private async fillTimeline(kanban: HTMLElement): Promise<void> {
+    if (this.kanbanTab === "config" || this.kanbanTab === "overview" ||
+        this.kanbanTab === "灵感收集" || this.kanbanTab === "模板库") return;
+    const box = kanban.querySelector<HTMLElement>("[data-tlspace]");
+    if (!box) return;
+    const spacePath = box.dataset.tlspace!;
+    const body = box.querySelector<HTMLElement>(".tl-body");
+    if (!body) return;
+    const entries = await this.plugin.loadTimelineEntries(spacePath);
+    body.innerHTML = this.timelineNodesHTML(entries, spacePath);
+    this.bindTimeline(box, spacePath);
+  }
+
+  private timelineNodesHTML(entries: TimelineEntry[], spacePath: string): string {
+    let h = `<button class="mb-btn primary tl-new" data-tlnew="${esc(
+      spacePath
+    )}">＋ 新增时间节点</button>`;
+    if (!entries.length) {
+      h += `<div class="tl-empty">该脑洞的「时间轴」文件夹暂无节点。点击上方按钮新增，或确认是否存在「01_时间轴」文件夹。</div>`;
+      return h;
+    }
+    h += `<div class="tl-list">`;
+    for (const e of entries) {
+      const date = new Date(e.mtime).toLocaleDateString("zh-CN");
+      h += `<div class="tl-node" data-tlpath="${esc(e.path)}">
+        <div class="tl-dot"></div>
+        <div class="tl-card">
+          <div class="tl-head">
+            <span class="tl-title" data-tlopen="${esc(e.path)}" title="在编辑器打开">${esc(
+        e.title
+      )}</span>
+            <span class="tl-actions">
+              <button class="tl-btn" data-tledit="${esc(
+                e.path
+              )}" title="快速编辑">✏️</button>
+            </span>
+          </div>
+          <div class="tl-snippet">${
+            e.snippet
+              ? esc(e.snippet)
+              : '<span class="muted">(空)</span>'
+          }</div>
+          <div class="tl-meta">${e.words} 字 · 更新于 ${date}</div>
+        </div>
+      </div>`;
+    }
+    h += `</div>`;
+    return h;
+  }
+
+  private bindTimeline(box: HTMLElement, _spacePath: string): void {
+    box.querySelectorAll<HTMLElement>("[data-tlnew]").forEach((el) => {
+      el.onclick = () => void this.plugin.quickCreateTimeline(el.dataset.tlnew!);
+    });
+    box.querySelectorAll<HTMLElement>("[data-tlopen]").forEach((el) => {
+      el.onclick = () => this.plugin.openFilePath(el.dataset.tlopen!);
+    });
+    box.querySelectorAll<HTMLElement>("[data-tledit]").forEach((el) => {
+      el.onclick = () => void this.beginInlineEdit(el.dataset.tledit!);
+    });
+  }
+
+  // 内联编辑：把节点卡片替换为 textarea，保存走 vault.modify
+  private async beginInlineEdit(path: string): Promise<void> {
+    const node = Array.from(
+      this.contentEl.querySelectorAll<HTMLElement>(".tl-node")
+    ).find((n) => n.dataset.tlpath === path);
+    if (!node) return;
+    const card = node.querySelector<HTMLElement>(".tl-card");
+    if (!card) return;
+    const content = await this.plugin.readNote(path);
+    card.innerHTML = `<textarea class="tl-edit" data-tltext>${esc(
+      content
+    )}</textarea><div class="tl-edit-bar">
+      <button class="mb-btn primary" data-tlsave="${esc(
+        path
+      )}">保存</button>
+      <button class="mb-btn ghost" data-tlcancel>取消</button>
+    </div>`;
+    const ta = card.querySelector<HTMLTextAreaElement>(".tl-edit");
+    ta?.focus();
+    ta?.addEventListener("keydown", (ev) => {
+      if ((ev.ctrlKey || ev.metaKey) && ev.key === "Enter") {
+        ev.preventDefault();
+        card.querySelector<HTMLElement>("[data-tlsave]")?.click();
+      }
+    });
+    card.querySelector<HTMLElement>("[data-tlcancel]")!.onclick = () => {
+      void this.render();
+    };
+    card.querySelector<HTMLElement>("[data-tlsave]")!.onclick = async () => {
+      const val = card.querySelector<HTMLTextAreaElement>(".tl-edit")?.value ?? "";
+      await this.plugin.saveNote(path, val);
+      new Notice("已保存：" + path.split("/").pop());
+      void this.render();
+    };
   }
 
   /* ---------- 事件绑定 ---------- */
