@@ -137,11 +137,12 @@ export class KanbanView extends ItemView {
     });
     const icSet = this.iconUrl("setting.svg");
     const icSync = this.iconUrl("sync.svg");
-    t += `<div class="ktab" data-global-refresh title="刷新全部数据"><span class="mb-icon" style="--mb-mask:url('${icSync}')"></span></div>`;
-    t += `<div class="ktab ${
+    t += `<div class="ktab-sep"></div><div class="kacts">`;
+    t += `<div class="kact" data-global-refresh title="刷新全部数据"><span class="mb-icon" style="--mb-mask:url('${icSync}')"></span></div>`;
+    t += `<div class="kact ${
       this.kanbanTab === "config" ? "active" : ""
-    }" data-k="config" title="看板配置（顺序 / 显隐）"><span class="mb-icon" style="--mb-mask:url('${icSet}')"></span></div>`;
-    t += `</div>`;
+    }" data-k="config" title="看板配置（顺序 / 显隐 / 统计范围 / 文件夹映射）"><span class="mb-icon" style="--mb-mask:url('${icSet}')"></span></div>`;
+    t += `</div></div>`;
 
     if (this.kanbanTab === "overview") t += this.overviewHTML(model);
     else if (this.kanbanTab === "灵感收集") t += this.inspirationHTML(model);
@@ -240,13 +241,20 @@ export class KanbanView extends ItemView {
     return h;
   }
 
-  /** 模块 1：基本信息（创建时间 / 最近更新 / 总字数 / 总文件数） */
+  /** 模块 1：基本信息（创建时间 / 最近更新 / 总字数 / 总文件数 / 状态） */
   private entityBasicInfo(node: MNode): string {
     const t = spaceTimes(node);
     const created = t.created
       ? new Date(t.created).toLocaleString("zh-CN")
       : "—";
     const mtime = t.mtime ? new Date(t.mtime).toLocaleString("zh-CN") : "—";
+    const cur = this.plugin.settings.spaceStatus[node.name] || STATUSES[0];
+    let pills = "";
+    STATUSES.forEach((s) => {
+      pills += `<span class="st-pill ${
+        cur === s ? "active" : ""
+      }" data-spacestatus="${esc(s)}" data-spacename="${esc(node.name)}">${esc(s)}</span>`;
+    });
     return `<div class="ksec entity-mod">
       <h3 class="mod-title">📋 基本信息</h3>
       <div class="info-grid">
@@ -255,14 +263,26 @@ export class KanbanView extends ItemView {
         <div class="info-item"><span class="info-k">📝 总字数</span><span class="info-v">${node.words}</span></div>
         <div class="info-item"><span class="info-k">📁 总文件数</span><span class="info-v">${node.notes}</span></div>
       </div>
+      <div class="status-row">
+        <span class="status-label">📌 当前状态</span>
+        <span class="status-pills">${pills}</span>
+      </div>
     </div>`;
   }
 
-  /** 模块 2：速览（各子文件夹文件数 / 总字数 / 新建入口） */
+  /** 模块 2：速览（仅展示「数字_文字」类型子文件夹；不符合规则时给出说明性空态） */
   private entityOverview(node: MNode): string {
-    const cards = this.renderSubCards(node, true);
+    const all = (node.children || []).filter((c) => c.type === "folder");
+    const shown = all.filter((c) => isTypeFolder(c.name));
     let h = `<div class="ksec entity-mod"><h3 class="mod-title">⚡ 速览</h3>`;
-    h += cards || `<div class="eempty">无子文件夹</div>`;
+    if (shown.length) {
+      h += this.renderSubCards(node, true);
+    } else {
+      h += `<div class="eempty">
+        <div class="ee-main">该脑洞下暂无「数字_文字」格式的展示型子文件夹。</div>
+        <div class="ee-sub">当前共有 ${all.length} 个子文件夹，其中 ${shown.length} 个符合展示规则（命名形如 00_世界观设定）。非类型文件夹不会出现在看板中。</div>
+      </div>`;
+    }
     h += `</div>`;
     return h;
   }
@@ -489,7 +509,7 @@ export class KanbanView extends ItemView {
   /* ---------- 事件绑定 ---------- */
   private wire(kanban: HTMLElement): void {
     const plugin = this.plugin;
-    kanban.querySelectorAll<HTMLElement>(".ktab").forEach((el) => {
+    kanban.querySelectorAll<HTMLElement>("[data-k]").forEach((el) => {
       el.onclick = () => {
         this.kanbanTab = el.dataset.k!;
         void this.render();
@@ -498,6 +518,12 @@ export class KanbanView extends ItemView {
     kanban.querySelectorAll<HTMLElement>("[data-newfile]").forEach((el) => {
       el.onclick = () => {
         void plugin.quickCreate(el.dataset.newfile!);
+      };
+    });
+    kanban.querySelectorAll<HTMLElement>("[data-spacestatus]").forEach((el) => {
+      el.onclick = () => {
+        plugin.setSpaceStatus(el.dataset.spacename!, el.dataset.spacestatus!);
+        void this.render();
       };
     });
     kanban.querySelectorAll<HTMLElement>("[data-focus]").forEach((el) => {

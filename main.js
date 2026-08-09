@@ -358,9 +358,10 @@ var KanbanView = class extends import_obsidian2.ItemView {
     });
     const icSet = this.iconUrl("setting.svg");
     const icSync = this.iconUrl("sync.svg");
-    t += `<div class="ktab" data-global-refresh title="\u5237\u65B0\u5168\u90E8\u6570\u636E"><span class="mb-icon" style="--mb-mask:url('${icSync}')"></span></div>`;
-    t += `<div class="ktab ${this.kanbanTab === "config" ? "active" : ""}" data-k="config" title="\u770B\u677F\u914D\u7F6E\uFF08\u987A\u5E8F / \u663E\u9690\uFF09"><span class="mb-icon" style="--mb-mask:url('${icSet}')"></span></div>`;
-    t += `</div>`;
+    t += `<div class="ktab-sep"></div><div class="kacts">`;
+    t += `<div class="kact" data-global-refresh title="\u5237\u65B0\u5168\u90E8\u6570\u636E"><span class="mb-icon" style="--mb-mask:url('${icSync}')"></span></div>`;
+    t += `<div class="kact ${this.kanbanTab === "config" ? "active" : ""}" data-k="config" title="\u770B\u677F\u914D\u7F6E\uFF08\u987A\u5E8F / \u663E\u9690 / \u7EDF\u8BA1\u8303\u56F4 / \u6587\u4EF6\u5939\u6620\u5C04\uFF09"><span class="mb-icon" style="--mb-mask:url('${icSet}')"></span></div>`;
+    t += `</div></div>`;
     if (this.kanbanTab === "overview") t += this.overviewHTML(model);
     else if (this.kanbanTab === "\u7075\u611F\u6536\u96C6") t += this.inspirationHTML(model);
     else if (this.kanbanTab === "\u6A21\u677F\u5E93") t += this.templateBoardHTML(model);
@@ -446,11 +447,16 @@ var KanbanView = class extends import_obsidian2.ItemView {
     h += this.heatmapSection(node.path + "/", "\u{1F525} \u6D3B\u8DC3\u70ED\u529B\u56FE\uFF08\u8FD1 12 \u4E2A\u6708\uFF09");
     return h;
   }
-  /** 模块 1：基本信息（创建时间 / 最近更新 / 总字数 / 总文件数） */
+  /** 模块 1：基本信息（创建时间 / 最近更新 / 总字数 / 总文件数 / 状态） */
   entityBasicInfo(node) {
     const t = spaceTimes(node);
     const created = t.created ? new Date(t.created).toLocaleString("zh-CN") : "\u2014";
     const mtime = t.mtime ? new Date(t.mtime).toLocaleString("zh-CN") : "\u2014";
+    const cur = this.plugin.settings.spaceStatus[node.name] || STATUSES[0];
+    let pills = "";
+    STATUSES.forEach((s) => {
+      pills += `<span class="st-pill ${cur === s ? "active" : ""}" data-spacestatus="${esc(s)}" data-spacename="${esc(node.name)}">${esc(s)}</span>`;
+    });
     return `<div class="ksec entity-mod">
       <h3 class="mod-title">\u{1F4CB} \u57FA\u672C\u4FE1\u606F</h3>
       <div class="info-grid">
@@ -459,13 +465,25 @@ var KanbanView = class extends import_obsidian2.ItemView {
         <div class="info-item"><span class="info-k">\u{1F4DD} \u603B\u5B57\u6570</span><span class="info-v">${node.words}</span></div>
         <div class="info-item"><span class="info-k">\u{1F4C1} \u603B\u6587\u4EF6\u6570</span><span class="info-v">${node.notes}</span></div>
       </div>
+      <div class="status-row">
+        <span class="status-label">\u{1F4CC} \u5F53\u524D\u72B6\u6001</span>
+        <span class="status-pills">${pills}</span>
+      </div>
     </div>`;
   }
-  /** 模块 2：速览（各子文件夹文件数 / 总字数 / 新建入口） */
+  /** 模块 2：速览（仅展示「数字_文字」类型子文件夹；不符合规则时给出说明性空态） */
   entityOverview(node) {
-    const cards = this.renderSubCards(node, true);
+    const all = (node.children || []).filter((c) => c.type === "folder");
+    const shown = all.filter((c) => isTypeFolder(c.name));
     let h = `<div class="ksec entity-mod"><h3 class="mod-title">\u26A1 \u901F\u89C8</h3>`;
-    h += cards || `<div class="eempty">\u65E0\u5B50\u6587\u4EF6\u5939</div>`;
+    if (shown.length) {
+      h += this.renderSubCards(node, true);
+    } else {
+      h += `<div class="eempty">
+        <div class="ee-main">\u8BE5\u8111\u6D1E\u4E0B\u6682\u65E0\u300C\u6570\u5B57_\u6587\u5B57\u300D\u683C\u5F0F\u7684\u5C55\u793A\u578B\u5B50\u6587\u4EF6\u5939\u3002</div>
+        <div class="ee-sub">\u5F53\u524D\u5171\u6709 ${all.length} \u4E2A\u5B50\u6587\u4EF6\u5939\uFF0C\u5176\u4E2D ${shown.length} \u4E2A\u7B26\u5408\u5C55\u793A\u89C4\u5219\uFF08\u547D\u540D\u5F62\u5982 00_\u4E16\u754C\u89C2\u8BBE\u5B9A\uFF09\u3002\u975E\u7C7B\u578B\u6587\u4EF6\u5939\u4E0D\u4F1A\u51FA\u73B0\u5728\u770B\u677F\u4E2D\u3002</div>
+      </div>`;
+    }
     h += `</div>`;
     return h;
   }
@@ -658,7 +676,7 @@ var KanbanView = class extends import_obsidian2.ItemView {
   /* ---------- 事件绑定 ---------- */
   wire(kanban) {
     const plugin = this.plugin;
-    kanban.querySelectorAll(".ktab").forEach((el) => {
+    kanban.querySelectorAll("[data-k]").forEach((el) => {
       el.onclick = () => {
         this.kanbanTab = el.dataset.k;
         void this.render();
@@ -667,6 +685,12 @@ var KanbanView = class extends import_obsidian2.ItemView {
     kanban.querySelectorAll("[data-newfile]").forEach((el) => {
       el.onclick = () => {
         void plugin.quickCreate(el.dataset.newfile);
+      };
+    });
+    kanban.querySelectorAll("[data-spacestatus]").forEach((el) => {
+      el.onclick = () => {
+        plugin.setSpaceStatus(el.dataset.spacename, el.dataset.spacestatus);
+        void this.render();
       };
     });
     kanban.querySelectorAll("[data-focus]").forEach((el) => {
