@@ -470,9 +470,9 @@ var KanbanView = class extends import_obsidian2.ItemView {
     return h;
   }
   /** 子文件夹卡片（速览 / 灵感收集共用）：文件数 + 字数 + 点击新建；showLocate 控制是否显示「定位」按钮 */
-  renderSubCards(node, showLocate) {
+  renderSubCards(node, showLocate, filterByType = true) {
     const kids = (node.children || []).filter(
-      (c) => c.type === "folder" && !this.plugin.settings.cardHidden[c.path]
+      (c) => c.type === "folder" && (!filterByType || isTypeFolder(c.name))
     );
     if (!kids.length) return "";
     let h = `<div class="card-grid">`;
@@ -493,34 +493,18 @@ var KanbanView = class extends import_obsidian2.ItemView {
     const t = spaceTimes(node);
     const created = t.created ? new Date(t.created).toLocaleDateString("zh-CN") : "\u2014";
     const mtime = t.mtime ? new Date(t.mtime).toLocaleDateString("zh-CN") : "\u2014";
-    let h = `<div class="ksec"><h3>\u{1F4C1} \u6587\u4EF6\u5939\u4FE1\u606F</h3>
+    return `<div class="ksec"><h3>\u{1F4C1} \u6587\u4EF6\u5939\u4FE1\u606F</h3>
       <div class="meta-grid">
         <div class="meta-row"><span class="meta-k">\u{1F5D3}\uFE0F \u521B\u5EFA\u65F6\u95F4</span><span class="meta-v">${created}</span></div>
         <div class="meta-row"><span class="meta-k">\u{1F504} \u6700\u8FD1\u66F4\u65B0</span><span class="meta-v">${mtime}</span></div>
-      </div>
-      <h3 style="margin-top:12px">\u{1F5C2}\uFE0F \u5B50\u6587\u4EF6\u5939\u5361\u7247</h3>
-      <div class="sub-toggle-list">`;
-    const kids = (node.children || []).filter((c) => c.type === "folder");
-    if (!kids.length) {
-      h += `<div class="sub-empty">\u65E0\u5B50\u6587\u4EF6\u5939</div>`;
-    } else {
-      for (const ch of kids) {
-        const hidden = !!this.plugin.settings.cardHidden[ch.path];
-        h += `<div class="sub-toggle ${hidden ? "off" : ""}" data-cardtoggle="${esc(ch.path)}">
-          <span class="st-name">${esc(ch.name)}</span>
-          <span class="st-state">${hidden ? "\u5DF2\u9690\u85CF" : "\u5C55\u793A\u4E2D"}</span>
-        </div>`;
-      }
-    }
-    h += `</div></div>`;
-    return h;
+      </div></div>`;
   }
   /* ---------- 灵感收集 ---------- */
   inspirationHTML(model) {
     const root = model.inspRoot;
     if (!root)
       return `<p class="muted">\u672A\u627E\u5230\u300C${esc(model.rootName)}\u300D\u6839\u76EE\u5F55\u3002</p>`;
-    return `<div class="ksec"><h3 class="board-title">\u{1F4E5} \u7075\u611F\u6536\u96C6</h3>` + this.folderMetaHTML(root) + this.renderSubCards(root, true) + `</div>` + this.heatmapSection(root.path + "/", "\u{1F525} \u7075\u611F\u6536\u96C6\u6D3B\u8DC3\u70ED\u529B\u56FE\uFF08\u8FD1 12 \u4E2A\u6708\uFF09");
+    return `<div class="ksec"><h3 class="board-title">\u{1F4E5} \u7075\u611F\u6536\u96C6</h3>` + this.folderMetaHTML(root) + this.renderSubCards(root, true, false) + `</div>` + this.heatmapSection(root.path + "/", "\u{1F525} \u7075\u611F\u6536\u96C6\u6D3B\u8DC3\u70ED\u529B\u56FE\uFF08\u8FD1 12 \u4E2A\u6708\uFF09");
   }
   /* ---------- 模板库看板 ---------- */
   templateBoardHTML(model) {
@@ -689,12 +673,6 @@ var KanbanView = class extends import_obsidian2.ItemView {
       el.onclick = (e) => {
         e.stopPropagation();
         plugin.revealPath(el.dataset.focus);
-      };
-    });
-    kanban.querySelectorAll("[data-cardtoggle]").forEach((el) => {
-      el.onclick = () => {
-        plugin.toggleCardHidden(el.dataset.cardtoggle);
-        void this.render();
       };
     });
     kanban.querySelectorAll("[data-tpledit]").forEach((el) => {
@@ -1153,7 +1131,6 @@ var DEFAULT_SETTINGS = {
   rootName: "\u7075\u611F\u6536\u96C6",
   kanbanOrder: [],
   kanbanHidden: {},
-  cardHidden: {},
   statScope: [...STANDARD],
   spaceStatus: {},
   initialized: false
@@ -1537,13 +1514,6 @@ var MeowbiusPlugin = class extends import_obsidian4.Plugin {
     const tmp = order[i];
     order[i] = order[j];
     order[j] = tmp;
-    void this.saveSettings();
-  }
-  // 切换某子文件夹是否在卡片区展示
-  toggleCardHidden(path) {
-    const h = this.settings.cardHidden;
-    if (h[path]) delete h[path];
-    else h[path] = true;
     void this.saveSettings();
   }
   toggleHide(id) {

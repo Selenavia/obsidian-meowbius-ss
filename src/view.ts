@@ -7,6 +7,7 @@ import {
   TPL_FILE,
   TPL_TYPES,
   normalizeName,
+  isTypeFolder,
 } from "./constants";
 
 export const VIEW_TYPE = "meowbius-kanban-view";
@@ -267,9 +268,15 @@ export class KanbanView extends ItemView {
   }
 
   /** 子文件夹卡片（速览 / 灵感收集共用）：文件数 + 字数 + 点击新建；showLocate 控制是否显示「定位」按钮 */
-  private renderSubCards(node: MNode, showLocate: boolean): string {
+  private renderSubCards(
+    node: MNode,
+    showLocate: boolean,
+    filterByType = true
+  ): string {
     const kids = (node.children || []).filter(
-      (c) => c.type === "folder" && !this.plugin.settings.cardHidden[c.path]
+      (c) =>
+        c.type === "folder" &&
+        (!filterByType || isTypeFolder(c.name))
     );
     if (!kids.length) return "";
     let h = `<div class="card-grid">`;
@@ -297,29 +304,11 @@ export class KanbanView extends ItemView {
     const mtime = t.mtime
       ? new Date(t.mtime).toLocaleDateString("zh-CN")
       : "—";
-    let h = `<div class="ksec"><h3>📁 文件夹信息</h3>
+    return `<div class="ksec"><h3>📁 文件夹信息</h3>
       <div class="meta-grid">
         <div class="meta-row"><span class="meta-k">🗓️ 创建时间</span><span class="meta-v">${created}</span></div>
         <div class="meta-row"><span class="meta-k">🔄 最近更新</span><span class="meta-v">${mtime}</span></div>
-      </div>
-      <h3 style="margin-top:12px">🗂️ 子文件夹卡片</h3>
-      <div class="sub-toggle-list">`;
-    const kids = (node.children || []).filter((c) => c.type === "folder");
-    if (!kids.length) {
-      h += `<div class="sub-empty">无子文件夹</div>`;
-    } else {
-      for (const ch of kids) {
-        const hidden = !!this.plugin.settings.cardHidden[ch.path];
-        h += `<div class="sub-toggle ${
-          hidden ? "off" : ""
-        }" data-cardtoggle="${esc(ch.path)}">
-          <span class="st-name">${esc(ch.name)}</span>
-          <span class="st-state">${hidden ? "已隐藏" : "展示中"}</span>
-        </div>`;
-      }
-    }
-    h += `</div></div>`;
-    return h;
+      </div></div>`;
   }
 
   /* ---------- 灵感收集 ---------- */
@@ -330,7 +319,7 @@ export class KanbanView extends ItemView {
     return (
       `<div class="ksec"><h3 class="board-title">📥 灵感收集</h3>` +
       this.folderMetaHTML(root) +
-      this.renderSubCards(root, true) +
+      this.renderSubCards(root, true, false) +
       `</div>` +
       this.heatmapSection(root.path + "/", "🔥 灵感收集活跃热力图（近 12 个月）")
     );
@@ -515,12 +504,6 @@ export class KanbanView extends ItemView {
       el.onclick = (e) => {
         e.stopPropagation();
         plugin.revealPath(el.dataset.focus!);
-      };
-    });
-    kanban.querySelectorAll<HTMLElement>("[data-cardtoggle]").forEach((el) => {
-      el.onclick = () => {
-        plugin.toggleCardHidden(el.dataset.cardtoggle!);
-        void this.render();
       };
     });
     kanban.querySelectorAll<HTMLElement>("[data-tpledit]").forEach((el) => {

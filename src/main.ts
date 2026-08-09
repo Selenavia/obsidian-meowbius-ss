@@ -23,7 +23,6 @@ interface MeowbiusSettings {
   rootName: string;
   kanbanOrder: string[];
   kanbanHidden: Record<string, boolean>;
-  cardHidden: Record<string, boolean>;
   statScope: string[];
   spaceStatus: Record<string, string>;
   initialized: boolean;
@@ -33,7 +32,6 @@ const DEFAULT_SETTINGS: MeowbiusSettings = {
   rootName: "灵感收集",
   kanbanOrder: [],
   kanbanHidden: {},
-  cardHidden: {},
   statScope: [...C.STANDARD],
   spaceStatus: {},
   initialized: false,
@@ -477,14 +475,6 @@ export default class MeowbiusPlugin extends Plugin {
     const tmp = order[i];
     order[i] = order[j];
     order[j] = tmp;
-    void this.saveSettings();
-  }
-
-  // 切换某子文件夹是否在卡片区展示
-  toggleCardHidden(path: string): void {
-    const h = this.settings.cardHidden;
-    if (h[path]) delete h[path];
-    else h[path] = true;
     void this.saveSettings();
   }
 
